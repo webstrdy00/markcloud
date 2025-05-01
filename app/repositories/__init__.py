@@ -1,0 +1,1 @@
+from .tradmark import TradmarkRepository

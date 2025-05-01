@@ -1,0 +1,89 @@
+from fastapi import APIRouter, Depends, Query, HTTPException
+from typing import List, Optional
+import re
+import logging
+from sqlalchemy.orm import Session
+
+from ..database import get_db
+from ..schemas.tradmark import (
+    TradmarkSearchResponse,
+    TradmarkDetail,
+    TradmarkSearchParams,
+    SearchResult
+)
+from ..services.tradmark import TradmarkService
+from ..config import settings
+
+# 로거 설정
+logger = logging.getLogger(__name__)
+
+router = APIRouter(
+    prefix="/trademarks",
+    tags=["trademarks"],
+    responses={404: {"description": "Not found"}}
+)
+
+@router.get("/", response_model=TradmarkSearchResponse)
+async def search_trademarks(
+    q: Optional[str] = Query(None, description="검색어 (상표명, 출원번호 등)"),
+    status: Optional[str] = Query(None, description="등록 상태 (등록, 출원, 거절 등)"),
+    product_code: Optional[str] = Query(None, description="상품 분류 코드"),
+    from_date: Optional[str] = Query(None, description="시작 날짜 (YYYYMMDD)"),
+    to_date: Optional[str] = Query(None, description="종료 날짜 (YYYYMMDD)"),
+    date_type: Optional[str] = Query("applicationDate", description="날짜 타입 (applicationDate, registrationDate, publicationDate)"),
+    limit: int = Query(settings.DEFAULT_LIMIT, ge=1, le=settings.MAX_LIMIT, description="페이지당 결과 수"),
+    offset: int = Query(0, ge=0, description="결과 오프셋"),
+    db: Session = Depends(get_db)
+):
+    """
+    상표 검색 API 엔드포인트
+    
+    - **q**: 검색어 (상표명, 출원번호 등)
+    - **status**: 등록 상태 필터 (등록, 출원, 거절 등)
+    - **product_code**: 상품 분류 코드 필터
+    - **from_date**: 시작 날짜 필터 (YYYYMMDD)
+    - **to_date**: 종료 날짜 필터 (YYYYMMDD)
+    - **date_type**: 날짜 필터의 대상 필드 (applicationDate, registrationDate, publicationDate)
+    - **limit**: 페이지당 결과 수
+    - **offset**: 결과 오프셋 (페이징용)
+    """
+    try:
+        # 날짜 형식 검증
+        if from_date and not re.match(r'^\d{8}$', from_date):
+            raise HTTPException(status_code=400, detail="시작 날짜는 YYYYMMDD 형식이어야 합니다")
+        
+        if to_date and not re.match(r'^\d{8}$', to_date):
+            raise HTTPException(status_code=400, detail="종료 날짜는 YYYYMMDD 형식이어야 합니다")
+        
+        # 검색 파라미터 설정
+        search_params = TradmarkSearchParams(
+            query=q,
+            status=status,
+            product_code=product_code,
+            from_date=from_date,
+            to_date=to_date,
+            date_type=date_type,
+            limit=limit,
+            offset=offset
+        )
+        
+        # 상표 서비스를 통해 검색 수행
+        trademark_service = TradmarkService(db)
+        results, total_count = trademark_service.search_trademarks(search_params)
+        
+        # 검색 로그 기록
+        logger.info(f"상표 검색 완료: 검색어='{q}', 필터=[상태='{status}', 상품코드='{product_code}', 날짜범위='{from_date}~{to_date}'], 결과={total_count}건")
+        
+        return TradmarkSearchResponse(
+            total=total_count,
+            offset=offset,
+            limit=limit,
+            results=results
+        )
+    except HTTPException:
+        # 이미 처리된 HTTP 예외는 그대로 전달
+        raise
+    except Exception as e:
+        # 예상치 못한 오류 처리
+        logger.error(f"상표 검색 중 오류 발생: {str(e)}")
+        raise HTTPException(status_code=500, detail="상표 검색 중 서버 오류가 발생했습니다")
