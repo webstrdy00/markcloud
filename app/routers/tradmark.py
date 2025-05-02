@@ -87,3 +87,31 @@ async def search_trademarks(
         # 예상치 못한 오류 처리
         logger.error(f"상표 검색 중 오류 발생: {str(e)}")
         raise HTTPException(status_code=500, detail="상표 검색 중 서버 오류가 발생했습니다")
+
+@router.get("/{trademark_id}", response_model=TradmarkDetail)
+async def get_trademark_detail(
+    trademark_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    상표 상세 정보 조회 API 엔드포인트
+    
+    - **trademark_id**: 조회할 상표 ID (applicationNumber)
+    """
+    try:
+        trademark_service = TradmarkService(db)
+        trademark = trademark_service.get_trademark_by_id(trademark_id)
+        
+        if not trademark:
+            logger.warning(f"상표 ID '{trademark_id}' 조회 실패: 해당 상표를 찾을 수 없음")
+            raise HTTPException(status_code=404, detail="상표를 찾을 수 없습니다")
+        
+        logger.info(f"상표 ID '{trademark_id}' 조회 성공")
+        return trademark
+    except HTTPException:
+        # 이미 처리된 HTTP 예외는 그대로 전달
+        raise
+    except Exception as e:
+        # 예상치 못한 오류 처리
+        logger.error(f"상표 상세 정보 조회 중 오류 발생: {str(e)}")
+        raise HTTPException(status_code=500, detail="상표 상세 정보 조회 중 서버 오류가 발생했습니다")

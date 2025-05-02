@@ -55,3 +55,48 @@ class TradmarkService:
         except Exception as e:
             logger.error(f"상표 검색 중 서비스 계층 오류: {str(e)}")
             raise
+
+    def get_trademark_by_id(self, trademark_id: str) -> Optional[TradmarkDetail]:
+        """
+        ID로 상표 상세 정보 조회
+        
+        Args:
+            trademark_id: 조회할 상표 ID (applicationNumber)
+            
+        Returns:
+            상표 상세 정보 또는 None
+        """
+        try:
+            # 저장소를 통해 데이터 조회
+            trademark = self.repository.find_by_id(trademark_id)
+            
+            if not trademark:
+                logger.debug(f"상표 ID '{trademark_id}' 조회: 해당 상표를 찾을 수 없음")
+                return None
+            
+            # DB 모델을 응답 스키마로 변환
+            detail = TradmarkDetail(
+                productName=trademark.productName,
+                productNameEng=trademark.productNameEng,
+                applicationNumber=trademark.applicationNumber,
+                applicationDate=trademark.applicationDate,
+                registerStatus=trademark.registerStatus,
+                publicationNumber=trademark.publicationNumber,
+                publicationDate=trademark.publicationDate,
+                registrationNumber=trademark.registrationNumber,
+                registrationDate=trademark.registrationDate,
+                internationalRegNumbers=trademark.internationalRegNumbers,
+                internationalRegDate=trademark.internationalRegDate,
+                priorityClaimNumList=trademark.priorityClaimNumList,
+                priorityClaimDateList=trademark.priorityClaimDateList,
+                asignProductMainCodeList=trademark.asignProductMainCodeList,
+                asignProductSubCodeList=trademark.asignProductSubCodeList,
+                viennaCodeList=trademark.viennaCodeList
+            )
+            
+            logger.debug(f"상표 ID '{trademark_id}' 조회 성공: {trademark.productName}")
+            return detail
+            
+        except Exception as e:
+            logger.error(f"상표 상세 정보 조회 중 서비스 계층 오류: {str(e)}")
+            raise
