@@ -59,34 +59,34 @@ Index('idx_product_main_code_array', Tradmark.asignProductMainCodeList, postgres
 Index('idx_product_sub_code_array', Tradmark.asignProductSubCodeList, postgresql_using='gin')
 Index('idx_vienna_code_array', Tradmark.viennaCodeList, postgresql_using='gin')
 
-# 검색 벡터 자동 업데이트를 위한 트리거 정의
-# PostgreSQL에서 실행할 DDL 스크립트
-search_vector_trigger = DDL('''
--- pg_trgm 확장 설치
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
+# # 검색 벡터 자동 업데이트를 위한 트리거 정의
+# # PostgreSQL에서 실행할 DDL 스크립트
+# search_vector_trigger = DDL('''
+# -- pg_trgm 확장 설치
+# CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
--- 검색 벡터 갱신을 위한 트리거 함수
-CREATE OR REPLACE FUNCTION trademark_search_vector_update() RETURNS trigger AS $
-BEGIN
-    NEW.search_vector = 
-        setweight(to_tsvector('simple', coalesce(NEW.productName, '')), 'A') ||
-        setweight(to_tsvector('simple', coalesce(NEW.productNameEng, '')), 'B') ||
-        setweight(to_tsvector('simple', coalesce(NEW.applicationNumber, '')), 'C') ||
-        setweight(to_tsvector('simple', coalesce(array_to_string(NEW.registrationNumber, ' '), '')), 'C');
-    RETURN NEW;
-END;
-$ LANGUAGE plpgsql;
+# -- 검색 벡터 갱신을 위한 트리거 함수
+# CREATE OR REPLACE FUNCTION trademark_search_vector_update() RETURNS trigger AS $
+# BEGIN
+#     NEW.search_vector = 
+#         setweight(to_tsvector('simple', coalesce(NEW.productName, '')), 'A') ||
+#         setweight(to_tsvector('simple', coalesce(NEW.productNameEng, '')), 'B') ||
+#         setweight(to_tsvector('simple', coalesce(NEW.applicationNumber, '')), 'C') ||
+#         setweight(to_tsvector('simple', coalesce(array_to_string(NEW.registrationNumber, ' '), '')), 'C');
+#     RETURN NEW;
+# END;
+# $ LANGUAGE plpgsql;
 
--- 트리거 생성 (해당 테이블이 존재해야 함)
-DROP TRIGGER IF EXISTS trademark_search_vector_update ON trademarks;
-CREATE TRIGGER trademark_search_vector_update
-BEFORE INSERT OR UPDATE ON trademarks
-FOR EACH ROW EXECUTE FUNCTION trademark_search_vector_update();
-''')
+# -- 트리거 생성 (해당 테이블이 존재해야 함)
+# DROP TRIGGER IF EXISTS trademark_search_vector_update ON trademarks;
+# CREATE TRIGGER trademark_search_vector_update
+# BEFORE INSERT OR UPDATE ON trademarks
+# FOR EACH ROW EXECUTE FUNCTION trademark_search_vector_update();
+# ''')
 
-# 테이블 생성 후 트리거 생성 이벤트 리스너
-event.listen(
-    Tradmark.__table__, 
-    'after_create',
-    search_vector_trigger
-)
+# # 테이블 생성 후 트리거 생성 이벤트 리스너
+# event.listen(
+#     Tradmark.__table__, 
+#     'after_create',
+#     search_vector_trigger
+# )

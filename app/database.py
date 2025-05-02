@@ -57,6 +57,17 @@ def init_db():
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("데이터베이스 테이블 생성 완료")
+        
+        # 트리거 생성 (이미 SQL 스크립트에서 함수가 생성되었다고 가정)
+        with engine.connect() as conn:
+            conn.execute(text("""
+                DROP TRIGGER IF EXISTS trademark_search_vector_update ON trademarks;
+                CREATE TRIGGER trademark_search_vector_update
+                BEFORE INSERT OR UPDATE ON trademarks
+                FOR EACH ROW EXECUTE FUNCTION trademark_search_vector_update();
+            """))
+            conn.commit()
+            logger.info("트리거 생성 완료")
     except Exception as e:
         logger.error(f"데이터베이스 테이블 생성 실패: {str(e)}")
         raise
