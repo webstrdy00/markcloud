@@ -187,3 +187,18 @@ class TradmarkRepository:
             query = query.order_by(similarity_order)
         
         return query
+    
+    def get_register_statuses(self) -> List[str]:
+        """
+        등록 상태 목록 조회
+        
+        Returns:
+            중복 제거된 등록 상태 목록
+        """
+        try:
+            query = select(Tradmark.registerStatus).distinct().where(Tradmark.registerStatus != None)
+            results = self.db.execute(query).scalars().all()
+            return [status for status in results if status]
+        except Exception as e:
+            logger.error(f"등록 상태 목록 조회 중 오류: {str(e)}")
+            raise

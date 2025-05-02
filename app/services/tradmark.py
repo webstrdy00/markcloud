@@ -100,3 +100,18 @@ class TradmarkService:
         except Exception as e:
             logger.error(f"상표 상세 정보 조회 중 서비스 계층 오류: {str(e)}")
             raise
+
+    def get_register_statuses(self) -> List[str]:
+        """
+        등록 상태 목록 조회
+        
+        Returns:
+            중복 제거된 등록 상태 목록
+        """
+        try:
+            statuses = self.repository.get_register_statuses()
+            logger.debug(f"등록 상태 목록 조회: {len(statuses)}개 항목")
+            return statuses
+        except Exception as e:
+            logger.error(f"등록 상태 목록 조회 중 서비스 계층 오류: {str(e)}")
+            raise

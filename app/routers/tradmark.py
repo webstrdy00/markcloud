@@ -115,3 +115,19 @@ async def get_trademark_detail(
         # 예상치 못한 오류 처리
         logger.error(f"상표 상세 정보 조회 중 오류 발생: {str(e)}")
         raise HTTPException(status_code=500, detail="상표 상세 정보 조회 중 서버 오류가 발생했습니다")
+    
+@router.get("/meta/statuses", response_model=List[str])
+async def get_register_statuses(db: Session = Depends(get_db)):
+    """
+    등록 상태 목록 조회 API 엔드포인트
+    
+    등록 가능한 모든 상태값(등록, 출원, 거절 등)의 목록을 반환합니다.
+    """
+    try:
+        trademark_service = TradmarkService(db)
+        statuses = trademark_service.get_register_statuses()
+        logger.info(f"등록 상태 목록 조회 성공: {len(statuses)}개 항목")
+        return statuses
+    except Exception as e:
+        logger.error(f"등록 상태 목록 조회 중 오류 발생: {str(e)}")
+        raise HTTPException(status_code=500, detail="등록 상태 목록 조회 중 서버 오류가 발생했습니다")
