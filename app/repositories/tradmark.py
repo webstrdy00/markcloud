@@ -202,3 +202,19 @@ class TradmarkRepository:
         except Exception as e:
             logger.error(f"등록 상태 목록 조회 중 오류: {str(e)}")
             raise
+
+    def get_product_codes(self) -> List[str]:
+        """
+        상품 분류 코드 목록 조회
+        
+        Returns:
+            중복 제거된 상품 분류 코드 목록
+        """
+        try:
+            # PostgreSQL의 unnest 함수를 사용하여 배열 요소를 행으로 변환 후 중복 제거
+            query = text("SELECT DISTINCT unnest(asignProductMainCodeList) as code FROM trademarks WHERE asignProductMainCodeList IS NOT NULL ORDER BY code")
+            results = self.db.execute(query).scalars().all()
+            return [code for code in results if code]
+        except Exception as e:
+            logger.error(f"상품 분류 코드 목록 조회 중 오류: {str(e)}")
+            raise

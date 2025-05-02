@@ -131,3 +131,19 @@ async def get_register_statuses(db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"등록 상태 목록 조회 중 오류 발생: {str(e)}")
         raise HTTPException(status_code=500, detail="등록 상태 목록 조회 중 서버 오류가 발생했습니다")
+    
+@router.get("/meta/product-codes", response_model=List[str])
+async def get_product_codes(db: Session = Depends(get_db)):
+    """
+    상품 분류 코드 목록 조회 API 엔드포인트
+    
+    상표 분류에 사용되는 모든 상품 분류 코드 목록을 반환합니다.
+    """
+    try:
+        trademark_service = TradmarkService(db)
+        codes = trademark_service.get_product_codes()
+        logger.info(f"상품 분류 코드 목록 조회 성공: {len(codes)}개 항목")
+        return codes
+    except Exception as e:
+        logger.error(f"상품 분류 코드 목록 조회 중 오류 발생: {str(e)}")
+        raise HTTPException(status_code=500, detail="상품 분류 코드 목록 조회 중 서버 오류가 발생했습니다")
