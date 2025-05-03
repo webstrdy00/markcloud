@@ -1,6 +1,6 @@
-from .tradmark import (
-    TradmarkSearchParams,
+from .trademark import (
+    TrademarkSearchParams,
     SearchResult,
-    TradmarkSearchResponse,
-    TradmarkDetail
+    TrademarkSearchResponse,
+    TrademarkDetail
 )

@@ -3,7 +3,7 @@ from typing import List, Optional, Dict, Any
 from datetime import date
 from typing import Annotated
 
-class TradmarkSearchParams(BaseModel):
+class TrademarkSearchParams(BaseModel):
     """상표 검색 파라미터"""
     query: Optional[str] = None
     status: Optional[str] = None
@@ -42,14 +42,14 @@ class SearchResult(BaseModel):
         # 빈 리스트와 null을 구분해야 할 경우 주석 처리
         # list: lambda v: v if v else None
 
-class TradmarkSearchResponse(BaseModel):
+class TrademarkSearchResponse(BaseModel):
     """상표 검색 응답"""
     total: int
     offset: int
     limit: int
     results: List[SearchResult]
 
-class TradmarkDetail(BaseModel):
+class TrademarkDetail(BaseModel):
     """상표 상세 정보"""
     productName: Optional[str] = None
     productNameEng: Optional[str] = None

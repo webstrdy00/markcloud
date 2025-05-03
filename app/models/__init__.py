@@ -1,1 +1,1 @@
-from .tradmark import Tradmark, Base
+from .trademark import Trademark, Base

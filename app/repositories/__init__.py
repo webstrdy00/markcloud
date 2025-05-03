@@ -1,1 +1,1 @@
-from .tradmark import TradmarkRepository
+from .trademark import TrademarkRepository

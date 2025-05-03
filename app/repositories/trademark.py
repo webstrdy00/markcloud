@@ -4,13 +4,13 @@ import datetime
 from sqlalchemy import select, func, or_, and_, text, cast, String
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.orm import Session
-from ..models import Tradmark
-from ..schemas import TradmarkSearchParams
+from ..models import Trademark
+from ..schemas import TrademarkSearchParams
 
 # 로깅 설정
 logger = logging.getLogger(__name__)
 
-class TradmarkRepository:
+class TrademarkRepository:
     """
     상표 데이터 저장소 클래스
     
@@ -20,7 +20,7 @@ class TradmarkRepository:
     def __init__(self, db: Session):
         self.db = db
     
-    def find_by_id(self, trademark_id: str) -> Optional[Tradmark]:
+    def find_by_id(self, trademark_id: str) -> Optional[Trademark]:
         """
         ID(출원번호)로 상표 정보 조회
         
@@ -31,14 +31,14 @@ class TradmarkRepository:
             상표 모델 객체 또는 None
         """
         try:
-            query = select(Tradmark).where(Tradmark.applicationNumber == trademark_id)
+            query = select(Trademark).where(Trademark.applicationNumber == trademark_id)
             result = self.db.execute(query).first()
             return result[0] if result else None
         except Exception as e:
             logger.error(f"상표 ID 조회 중 오류: {str(e)}")
             raise
     
-    def search(self, params: TradmarkSearchParams) -> Tuple[List[Tradmark], int]:
+    def search(self, params: TrademarkSearchParams) -> Tuple[List[Trademark], int]:
         """
         검색 조건에 맞는 상표 정보 검색
         
@@ -50,7 +50,7 @@ class TradmarkRepository:
         """
         try:
             # 기본 쿼리 생성
-            query = select(Tradmark)
+            query = select(Trademark)
             
             # 필터 조건 적용
             query = self._apply_filters(query, params)
@@ -75,7 +75,7 @@ class TradmarkRepository:
             logger.error(f"상표 검색 중 오류: {str(e)}")
             raise
     
-    def _apply_filters(self, query, params: TradmarkSearchParams):
+    def _apply_filters(self, query, params: TrademarkSearchParams):
         """
         검색 파라미터에 따라 필터 조건 적용
         
@@ -88,15 +88,15 @@ class TradmarkRepository:
         """
         # 등록 상태 필터
         if params.status:
-            query = query.where(Tradmark.registerStatus == params.status)
+            query = query.where(Trademark.registerStatus == params.status)
         
         # 상품 코드 필터
         if params.product_code:
-            query = query.where(Tradmark.asignProductMainCodeList.any(params.product_code))
+            query = query.where(Trademark.asignProductMainCodeList.any(params.product_code))
         
         # 날짜 범위 필터 - Date 타입 처리 개선
         if params.from_date or params.to_date:
-            date_column = getattr(Tradmark, params.date_type)
+            date_column = getattr(Trademark, params.date_type)
             
             # 날짜 형식 변환 (문자열 -> 날짜)
             if params.from_date:
@@ -158,16 +158,16 @@ class TradmarkRepository:
             # similarity 함수가 0.3 이상이면 유사하다고 판단
             similarity_threshold = 0.3
             similarity_conditions = [
-                func.similarity(Tradmark.productName, search_term) > similarity_threshold,
-                func.similarity(Tradmark.productNameEng, search_term) > similarity_threshold,
-                Tradmark.applicationNumber.ilike(f'%{search_term}%'),
+                func.similarity(Trademark.productName, search_term) > similarity_threshold,
+                func.similarity(Trademark.productNameEng, search_term) > similarity_threshold,
+                Trademark.applicationNumber.ilike(f'%{search_term}%'),
                 # 배열 필드 검색
-                Tradmark.registrationNumber.any(search_term)
+                Trademark.registrationNumber.any(search_term)
             ]
             
             # 검색 조건 적용
             search_condition = or_(
-                Tradmark.search_vector.op('@@')(tsquery),
+                Trademark.search_vector.op('@@')(tsquery),
                 *similarity_conditions
             )
             
@@ -176,11 +176,11 @@ class TradmarkRepository:
             # 유사도 기반 정렬
             similarity_order = (
                 func.greatest(
-                    func.similarity(Tradmark.productName, search_term),
-                    func.similarity(Tradmark.productNameEng, search_term),
-                    func.similarity(cast(Tradmark.applicationNumber, String), search_term),
+                    func.similarity(Trademark.productName, search_term),
+                    func.similarity(Trademark.productNameEng, search_term),
+                    func.similarity(cast(Trademark.applicationNumber, String), search_term),
                     # 배열에서는 첫 번째 요소만 비교 (단순화)
-                    func.coalesce(func.similarity(func.array_to_string(Tradmark.registrationNumber, ','), search_term), 0)
+                    func.coalesce(func.similarity(func.array_to_string(Trademark.registrationNumber, ','), search_term), 0)
                 ).desc()
             )
             
@@ -196,7 +196,7 @@ class TradmarkRepository:
             중복 제거된 등록 상태 목록
         """
         try:
-            query = select(Tradmark.registerStatus).distinct().where(Tradmark.registerStatus != None)
+            query = select(Trademark.registerStatus).distinct().where(Trademark.registerStatus != None)
             results = self.db.execute(query).scalars().all()
             return [status for status in results if status]
         except Exception as e:

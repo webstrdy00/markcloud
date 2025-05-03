@@ -1,13 +1,13 @@
 from typing import List, Dict, Tuple, Any, Optional
 import logging
 from sqlalchemy.orm import Session
-from ..schemas import TradmarkSearchParams, SearchResult, TradmarkDetail
-from ..repositories.tradmark import TradmarkRepository
+from ..schemas import TrademarkSearchParams, SearchResult, TrademarkDetail
+from ..repositories.trademark import TrademarkRepository
 
 # 로거 설정
 logger = logging.getLogger(__name__)
 
-class TradmarkService:
+class TrademarkService:
     """
     상표 서비스 클래스
     
@@ -16,9 +16,9 @@ class TradmarkService:
     
     def __init__(self, db: Session):
         self.db = db
-        self.repository = TradmarkRepository(db)
+        self.repository = TrademarkRepository(db)
     
-    def search_trademarks(self, params: TradmarkSearchParams) -> Tuple[List[SearchResult], int]:
+    def search_trademarks(self, params: TrademarkSearchParams) -> Tuple[List[SearchResult], int]:
         """
         상표 검색 기능
         
@@ -56,7 +56,7 @@ class TradmarkService:
             logger.error(f"상표 검색 중 서비스 계층 오류: {str(e)}")
             raise
 
-    def get_trademark_by_id(self, trademark_id: str) -> Optional[TradmarkDetail]:
+    def get_trademark_by_id(self, trademark_id: str) -> Optional[TrademarkDetail]:
         """
         ID로 상표 상세 정보 조회
         
@@ -75,7 +75,7 @@ class TradmarkService:
                 return None
             
             # DB 모델을 응답 스키마로 변환
-            detail = TradmarkDetail(
+            detail = TrademarkDetail(
                 productName=trademark.productName,
                 productNameEng=trademark.productNameEng,
                 applicationNumber=trademark.applicationNumber,
