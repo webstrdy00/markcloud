@@ -3,6 +3,7 @@ import logging
 from sqlalchemy.orm import Session
 from ..schemas import TrademarkSearchParams, SearchResult, TrademarkDetail
 from ..repositories.trademark import TrademarkRepository
+from ..utils.dto import to_schema, to_schema_list
 
 # 로거 설정
 logger = logging.getLogger(__name__)
@@ -35,19 +36,8 @@ class TrademarkService:
             # 저장소를 통해 데이터 검색
             trademarks, total_count = self.repository.search(params)
             
-            # 결과 변환 (DB 모델 -> 응답 스키마)
-            results = []
-            for trademark in trademarks:
-                results.append(SearchResult(
-                    applicationNumber=trademark.applicationNumber,
-                    productName=trademark.productName,
-                    productNameEng=trademark.productNameEng,
-                    applicationDate=trademark.applicationDate,
-                    registerStatus=trademark.registerStatus,
-                    registrationNumber=trademark.registrationNumber,
-                    registrationDate=trademark.registrationDate,
-                    asignProductMainCodeList=trademark.asignProductMainCodeList
-                ))
+            # 결과 변환 (DB 모델 -> 응답 스키마) - 헬퍼 함수 활용
+            results = to_schema_list(trademarks, SearchResult)
             
             logger.debug(f"상표 검색 결과: {total_count}건 중 {len(results)}건 반환")
             return results, total_count
@@ -74,25 +64,8 @@ class TrademarkService:
                 logger.debug(f"상표 ID '{trademark_id}' 조회: 해당 상표를 찾을 수 없음")
                 return None
             
-            # DB 모델을 응답 스키마로 변환
-            detail = TrademarkDetail(
-                productName=trademark.productName,
-                productNameEng=trademark.productNameEng,
-                applicationNumber=trademark.applicationNumber,
-                applicationDate=trademark.applicationDate,
-                registerStatus=trademark.registerStatus,
-                publicationNumber=trademark.publicationNumber,
-                publicationDate=trademark.publicationDate,
-                registrationNumber=trademark.registrationNumber,
-                registrationDate=trademark.registrationDate,
-                internationalRegNumbers=trademark.internationalRegNumbers,
-                internationalRegDate=trademark.internationalRegDate,
-                priorityClaimNumList=trademark.priorityClaimNumList,
-                priorityClaimDateList=trademark.priorityClaimDateList,
-                asignProductMainCodeList=trademark.asignProductMainCodeList,
-                asignProductSubCodeList=trademark.asignProductSubCodeList,
-                viennaCodeList=trademark.viennaCodeList
-            )
+            # DB 모델을 응답 스키마로 변환 - 헬퍼 함수 활용
+            detail = to_schema(trademark, TrademarkDetail)
             
             logger.debug(f"상표 ID '{trademark_id}' 조회 성공: {trademark.productName}")
             return detail

@@ -126,30 +126,3 @@ class TrademarkDetail(BaseModel):
             date: lambda v: v.strftime("%Y%m%d") if v else None,
         }
     )
-
-# 모델 → 스키마 변환 헬퍼 함수
-def to_schema(model_obj, schema_class):
-    """
-    DB 모델 객체를 Pydantic 스키마로 변환
-    
-    Args:
-        model_obj: SQLAlchemy 모델 객체
-        schema_class: 변환할 Pydantic 스키마 클래스
-        
-    Returns:
-        변환된 Pydantic 스키마 객체
-    """
-    return schema_class.model_validate(model_obj, from_attributes=True)
-
-def to_schema_list(model_objs, schema_class):
-    """
-    DB 모델 객체 리스트를 Pydantic 스키마 리스트로 변환
-    
-    Args:
-        model_objs: SQLAlchemy 모델 객체 리스트
-        schema_class: 변환할 Pydantic 스키마 클래스
-        
-    Returns:
-        변환된 Pydantic 스키마 객체 리스트
-    """
-    return [to_schema(obj, schema_class) for obj in model_objs]
