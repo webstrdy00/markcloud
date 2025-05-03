@@ -1,8 +1,6 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from typing import List, Optional, Annotated
-import re
 import logging
-from sqlalchemy.orm import Session
 
 from ..dependencies import TrademarkServiceDep
 from ..schemas.trademark import (

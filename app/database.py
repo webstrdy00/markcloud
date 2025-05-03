@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from contextlib import contextmanager
 import logging
 
 from .config import settings
@@ -10,22 +11,11 @@ logger = logging.getLogger(__name__)
 
 # 데이터베이스 URL 확인
 if not settings.DATABASE_URL:
-    DEFAULT_DB_URL = "postgresql://trademark_user:your_password@localhost:5432/trademark_db"
+    DEFAULT_DB_URL = "postgresql://postgres:12345@localhost:5432/trademark_db"
     logger.warning(f"DATABASE_URL이 설정되지 않아 기본 로컬 데이터베이스를 사용합니다: {DEFAULT_DB_URL}")
     DATABASE_URL = DEFAULT_DB_URL
 else:
     DATABASE_URL = settings.DATABASE_URL
-
-# 데이터베이스 연결 정보 로깅 (비밀번호 제외)
-try:
-    db_parts = DATABASE_URL.split("@")
-    if len(db_parts) > 1:
-        db_info = db_parts[1]
-        logger.info(f"데이터베이스 연결 정보 (호스트:포트/DB): {db_info}")
-    else:
-        logger.warning("데이터베이스 연결 문자열 형식이 올바르지 않습니다.")
-except Exception as e:
-    logger.error(f"데이터베이스 연결 정보 파싱 오류: {str(e)}")
 
 try:
     # 데이터베이스 엔진 생성
@@ -50,6 +40,38 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Base 클래스 생성
 Base = declarative_base()
 
+# 컨텍스트 매니저 형태의 데이터베이스 세션 제공
+@contextmanager
+def get_db_context():
+    """
+    컨텍스트 매니저 형태의 데이터베이스 세션 제공
+    
+    with get_db_context() as db:
+        # 데이터베이스 작업 수행
+    """
+    db = SessionLocal()
+    try:
+        logger.debug("데이터베이스 세션 생성")
+        yield db
+    finally:
+        db.close()
+        logger.debug("데이터베이스 세션 종료")
+
+# FastAPI 의존성 주입을 위한 세션 제공
+def get_db():
+    """
+    API 엔드포인트에서 사용할 데이터베이스 세션 제공
+    
+    FastAPI의 의존성 주입 시스템에서 사용됨
+    """
+    db = SessionLocal()
+    try:
+        logger.debug("데이터베이스 세션 생성")
+        yield db
+    finally:
+        db.close()
+        logger.debug("데이터베이스 세션 종료")
+
 def init_db():
     """
     데이터베이스 테이블 초기화 함수
@@ -71,20 +93,6 @@ def init_db():
     except Exception as e:
         logger.error(f"데이터베이스 테이블 생성 실패: {str(e)}")
         raise
-
-def get_db():
-    """
-    API 엔드포인트에서 사용할 데이터베이스 세션 제공
-    
-    FastAPI의 의존성 주입 시스템에서 사용됨
-    """
-    db = SessionLocal()
-    try:
-        logger.debug("데이터베이스 세션 생성")
-        yield db
-    finally:
-        db.close()
-        logger.debug("데이터베이스 세션 종료")
 
 def test_connection():
     """
