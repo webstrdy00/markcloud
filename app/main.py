@@ -6,6 +6,7 @@ import logging
 from .config import settings
 from .database import Base, engine, test_connection
 from .routers import trademark
+from .exceptions import register_exception_handlers
 
 # 로깅 설정
 logging.basicConfig(
@@ -37,6 +38,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# 전역 예외 핸들러 등록
+register_exception_handlers(app)
 
 # CORS 설정
 logger.info(f"CORS 허용 도메인: {settings.CORS_ORIGINS}")
