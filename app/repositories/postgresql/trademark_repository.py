@@ -4,34 +4,36 @@ import datetime
 from sqlalchemy import select, func, or_, and_, text, cast, String
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.orm import Session
-from ..models import Trademark
-from ..schemas import TrademarkSearchParams
+
+from ...models.trademark import Trademark
+from ...schemas.trademark import TrademarkSearchParams
+from ..trademark_repository import ITrademarkRepository
 
 # 로깅 설정
 logger = logging.getLogger(__name__)
 
-class TrademarkRepository:
+class PostgresTrademarkRepository(ITrademarkRepository):
     """
-    상표 데이터 저장소 클래스
+    PostgreSQL 기반 상표 저장소 구현체
     
-    데이터베이스 쿼리 로직을 캡슐화하여 서비스 레이어와 분리
+    ITrademarkRepository 인터페이스 구현
     """
     
     def __init__(self, db: Session):
         self.db = db
     
-    def find_by_id(self, trademark_id: str) -> Optional[Trademark]:
+    def find_by_id(self, id: str) -> Optional[Trademark]:
         """
         ID(출원번호)로 상표 정보 조회
         
         Args:
-            trademark_id: 상표 ID (applicationNumber)
+            id: 상표 ID (applicationNumber)
             
         Returns:
             상표 모델 객체 또는 None
         """
         try:
-            query = select(Trademark).where(Trademark.applicationNumber == trademark_id)
+            query = select(Trademark).where(Trademark.applicationNumber == id)
             result = self.db.execute(query).first()
             return result[0] if result else None
         except Exception as e:
@@ -75,6 +77,115 @@ class TrademarkRepository:
             logger.error(f"상표 검색 중 오류: {str(e)}")
             raise
     
+    def list_all(self) -> List[Trademark]:
+        """
+        모든 상표 조회 (주의: 대량 데이터의 경우 사용 지양)
+        
+        Returns:
+            모든 상표 리스트
+        """
+        try:
+            query = select(Trademark)
+            results = self.db.execute(query).scalars().all()
+            return list(results)
+        except Exception as e:
+            logger.error(f"모든 상표 조회 중 오류: {str(e)}")
+            raise
+    
+    def create(self, entity: Trademark) -> Trademark:
+        """
+        상표 생성
+        
+        Args:
+            entity: 생성할 상표 엔티티
+            
+        Returns:
+            생성된 상표 엔티티
+        """
+        try:
+            self.db.add(entity)
+            self.db.commit()
+            self.db.refresh(entity)
+            return entity
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"상표 생성 중 오류: {str(e)}")
+            raise
+    
+    def update(self, entity: Trademark) -> Trademark:
+        """
+        상표 업데이트
+        
+        Args:
+            entity: 업데이트할 상표 엔티티
+            
+        Returns:
+            업데이트된 상표 엔티티
+        """
+        try:
+            self.db.merge(entity)
+            self.db.commit()
+            self.db.refresh(entity)
+            return entity
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"상표 업데이트 중 오류: {str(e)}")
+            raise
+    
+    def delete(self, id: str) -> bool:
+        """
+        ID로 상표 삭제
+        
+        Args:
+            id: 삭제할 상표 ID
+            
+        Returns:
+            삭제 성공 여부
+        """
+        try:
+            entity = self.find_by_id(id)
+            if entity:
+                self.db.delete(entity)
+                self.db.commit()
+                return True
+            return False
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"상표 삭제 중 오류: {str(e)}")
+            raise
+    
+    def get_register_statuses(self) -> List[str]:
+        """
+        등록 상태 목록 조회
+        
+        Returns:
+            중복 제거된 등록 상태 목록
+        """
+        try:
+            query = select(Trademark.registerStatus).distinct().where(Trademark.registerStatus != None)
+            results = self.db.execute(query).scalars().all()
+            return [status for status in results if status]
+        except Exception as e:
+            logger.error(f"등록 상태 목록 조회 중 오류: {str(e)}")
+            raise
+
+    def get_product_codes(self) -> List[str]:
+        """
+        상품 분류 코드 목록 조회
+        
+        Returns:
+            중복 제거된 상품 분류 코드 목록
+        """
+        try:
+            # PostgreSQL의 unnest 함수를 사용하여 배열 요소를 행으로 변환 후 중복 제거
+            query = text("SELECT DISTINCT unnest(asignProductMainCodeList) as code FROM trademarks WHERE asignProductMainCodeList IS NOT NULL ORDER BY code")
+            results = self.db.execute(query).scalars().all()
+            return [code for code in results if code]
+        except Exception as e:
+            logger.error(f"상품 분류 코드 목록 조회 중 오류: {str(e)}")
+            raise
+    
+    # 헬퍼 메서드 - 공통 필터 적용
     def _apply_filters(self, query, params: TrademarkSearchParams):
         """
         검색 파라미터에 따라 필터 조건 적용
@@ -123,6 +234,7 @@ class TrademarkRepository:
         
         return query
     
+    # 헬퍼 메서드 - 검색 조건 적용
     def _apply_search_conditions(self, query, search_term: str):
         """
         검색어 기반 검색 및 정렬 적용
@@ -187,34 +299,3 @@ class TrademarkRepository:
             query = query.order_by(similarity_order)
         
         return query
-    
-    def get_register_statuses(self) -> List[str]:
-        """
-        등록 상태 목록 조회
-        
-        Returns:
-            중복 제거된 등록 상태 목록
-        """
-        try:
-            query = select(Trademark.registerStatus).distinct().where(Trademark.registerStatus != None)
-            results = self.db.execute(query).scalars().all()
-            return [status for status in results if status]
-        except Exception as e:
-            logger.error(f"등록 상태 목록 조회 중 오류: {str(e)}")
-            raise
-
-    def get_product_codes(self) -> List[str]:
-        """
-        상품 분류 코드 목록 조회
-        
-        Returns:
-            중복 제거된 상품 분류 코드 목록
-        """
-        try:
-            # PostgreSQL의 unnest 함수를 사용하여 배열 요소를 행으로 변환 후 중복 제거
-            query = text("SELECT DISTINCT unnest(asignProductMainCodeList) as code FROM trademarks WHERE asignProductMainCodeList IS NOT NULL ORDER BY code")
-            results = self.db.execute(query).scalars().all()
-            return [code for code in results if code]
-        except Exception as e:
-            logger.error(f"상품 분류 코드 목록 조회 중 오류: {str(e)}")
-            raise

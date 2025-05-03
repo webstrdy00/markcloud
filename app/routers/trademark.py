@@ -4,15 +4,12 @@ import re
 import logging
 from sqlalchemy.orm import Session
 
-from ..database import get_db
+from ..dependencies import TrademarkServiceDep
 from ..schemas.trademark import (
     TrademarkSearchResponse,
     TrademarkDetail,
-    TrademarkSearchParams,
-    SearchResult,
-    DateFieldType
+    TrademarkSearchParams
 )
-from ..services.trademark import TrademarkService
 
 # 로거 설정
 logger = logging.getLogger(__name__)
@@ -23,15 +20,11 @@ router = APIRouter(
     responses={404: {"description": "Not found"}}
 )
 
-# 서비스 의존성 주입 함수
-def get_trademark_service(db: Session = Depends(get_db)):
-    return TrademarkService(db)
-
 @router.get("/", response_model=TrademarkSearchResponse)
 async def search_trademarks(
     # 모델을 직접 의존성으로 사용
     params: Annotated[TrademarkSearchParams, Depends()],  
-    service: Annotated[TrademarkService, Depends(get_trademark_service)]
+    service: TrademarkServiceDep
 ):
     """
     상표 검색 API 엔드포인트
@@ -54,7 +47,7 @@ async def search_trademarks(
 @router.get("/{trademark_id}", response_model=TrademarkDetail)
 async def get_trademark_detail(
     trademark_id: str,
-    service: Annotated[TrademarkService, Depends(get_trademark_service)]
+    service: TrademarkServiceDep
 ):
     """
     상표 상세 정보 조회 API 엔드포인트
@@ -72,7 +65,7 @@ async def get_trademark_detail(
 
 @router.get("/meta/statuses", response_model=List[str])
 async def get_register_statuses(
-    service: Annotated[TrademarkService, Depends(get_trademark_service)]
+    service: TrademarkServiceDep
 ):
     """
     등록 상태 목록 조회 API 엔드포인트
@@ -85,7 +78,7 @@ async def get_register_statuses(
     
 @router.get("/meta/product-codes", response_model=List[str])
 async def get_product_codes(
-    service: Annotated[TrademarkService, Depends(get_trademark_service)]
+    service: TrademarkServiceDep
 ):
     """
     상품 분류 코드 목록 조회 API 엔드포인트

@@ -2,7 +2,8 @@ from typing import List, Dict, Tuple, Any, Optional
 import logging
 from sqlalchemy.orm import Session
 from ..schemas import TrademarkSearchParams, SearchResult, TrademarkDetail
-from ..repositories.trademark import TrademarkRepository
+from ..repositories.trademark_repository import ITrademarkRepository
+from ..repositories.factory import get_trademark_repository
 from ..utils.dto import to_schema, to_schema_list
 
 # 로거 설정
@@ -14,10 +15,10 @@ class TrademarkService:
     
     비즈니스 로직을 담당하며, 저장소 레이어를 통해 데이터에 접근
     """
-    
-    def __init__(self, db: Session):
-        self.db = db
-        self.repository = TrademarkRepository(db)
+        
+    def __init__(self, repository: ITrademarkRepository):
+        # 저장소 인터페이스를 직접 주입 받음
+        self.repository = repository
     
     def search_trademarks(self, params: TrademarkSearchParams) -> Tuple[List[SearchResult], int]:
         """
