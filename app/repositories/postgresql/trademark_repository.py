@@ -1,7 +1,7 @@
 from typing import List, Tuple, Optional, Dict, Any
 import logging
 import datetime
-from sqlalchemy import select, func, or_, and_, text, cast, String
+from sqlalchemy import select, func, or_, and_, text, cast, String, insert
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.orm import Session
 
@@ -23,18 +23,18 @@ class PostgresTrademarkRepository(ITrademarkRepository):
     def __init__(self, db: Session):
         self.db = db
     
-    def find_by_id(self, id: str) -> Optional[Trademark]:
+    def find_by_id(self, id: int) -> Optional[Trademark]:
         """
-        ID(출원번호)로 상표 정보 조회
+        ID로 상표 정보 조회
         
         Args:
-            id: 상표 ID (applicationNumber)
+            id: 상표 ID
             
         Returns:
             상표 모델 객체 또는 None
         """
         try:
-            query = select(Trademark).where(Trademark.applicationNumber == id)
+            query = select(Trademark).where(Trademark.id == id)
             result = self.db.execute(query).first()
             return result[0] if result else None
         except Exception as e:
@@ -133,7 +133,7 @@ class PostgresTrademarkRepository(ITrademarkRepository):
             logger.error(f"상표 업데이트 중 오류: {str(e)}")
             raise
     
-    def delete(self, id: str) -> bool:
+    def delete(self, id: int) -> bool:
         """
         ID로 상표 삭제
         
@@ -179,7 +179,7 @@ class PostgresTrademarkRepository(ITrademarkRepository):
         """
         try:
             # PostgreSQL의 unnest 함수를 사용하여 배열 요소를 행으로 변환 후 중복 제거
-            query = text("SELECT DISTINCT unnest(asignProductMainCodeList) as code FROM trademarks WHERE asignProductMainCodeList IS NOT NULL ORDER BY code")
+            query = text('SELECT DISTINCT unnest("asignProductMainCodeList") as code FROM trademarks WHERE "asignProductMainCodeList" IS NOT NULL ORDER BY code')
             results = self.db.execute(query).scalars().all()
             return [code for code in results if code]
         except Exception as e:
@@ -317,3 +317,26 @@ class PostgresTrademarkRepository(ITrademarkRepository):
             query = query.order_by(similarity_order)
         
         return query
+
+    def batch_insert(self, batch: List[Dict[str, Any]], batch_size: int):
+        """
+        Batch insert 작업을 수행합니다.
+        
+        Args:
+            batch: 삽입할 데이터 배치
+            batch_size: 배치 크기
+        """
+        try:
+            # 배치 크기에 도달하면 데이터베이스에 삽입
+            if len(batch) >= batch_size:
+                # upsert 작업 (on conflict do update)
+                self.db.execute(insert(Trademark).values(batch).on_conflict_do_update(
+                    index_elements=['id'],
+                    set_={k: insert(Trademark).excluded[k] for k in batch[0].keys() if k != 'id'}
+                ))
+                self.db.commit()
+                logger.info(f"{len(batch)}개 데이터 처리 완료")
+                batch = []
+        except Exception as e:
+            logger.error(f"Batch insert 중 오류: {str(e)}")
+            raise

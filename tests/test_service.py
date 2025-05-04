@@ -27,13 +27,13 @@ class TestTrademarkService:
     def test_get_trademark_by_id(self, trademark_service):
         """ID로 상표 상세 정보 조회 테스트"""
         # 존재하는 ID로 조회
-        trademark = trademark_service.get_trademark_by_id("40-2023-0001")
+        trademark = trademark_service.get_trademark_by_id("1")
         assert trademark is not None
         assert trademark.applicationNumber == "40-2023-0001"
         assert trademark.productName == "스타벅스"
         
         # 존재하지 않는 ID로 조회
-        trademark = trademark_service.get_trademark_by_id("non-existent-id")
+        trademark = trademark_service.get_trademark_by_id("999")
         assert trademark is None
     
     def test_get_register_statuses(self, trademark_service):

@@ -57,6 +57,7 @@ def mock_repository() -> MockTrademarkRepository:
     # 테스트 데이터 추가
     # 예시 데이터 1: 스타벅스
     starbucks = Trademark(
+        id=1,
         applicationNumber="40-2023-0001",
         productName="스타벅스",
         productNameEng="Starbucks",
@@ -69,6 +70,7 @@ def mock_repository() -> MockTrademarkRepository:
     
     # 예시 데이터 2: 커피빈
     coffeebean = Trademark(
+        id=2,
         applicationNumber="40-2023-0002",
         productName="커피빈",
         productNameEng="Coffee Bean",
@@ -79,6 +81,7 @@ def mock_repository() -> MockTrademarkRepository:
     
     # 예시 데이터 3: 삼성전자
     samsung = Trademark(
+        id=3,
         applicationNumber="40-2023-0003",
         productName="삼성전자",
         productNameEng="Samsung Electronics",
@@ -114,6 +117,7 @@ def override_dependencies():
     
     # 예시 데이터 추가
     starbucks = Trademark(
+        id=1,
         applicationNumber="40-2023-0001",
         productName="스타벅스",
         productNameEng="Starbucks",
@@ -125,6 +129,7 @@ def override_dependencies():
     )
     
     coffeebean = Trademark(
+        id=2,
         applicationNumber="40-2023-0002",
         productName="커피빈",
         productNameEng="Coffee Bean",
@@ -135,6 +140,7 @@ def override_dependencies():
     
     # 삼성전자 데이터 추가
     samsung = Trademark(
+        id=3,
         applicationNumber="40-2023-0003",
         productName="삼성전자",
         productNameEng="Samsung Electronics",
@@ -147,6 +153,7 @@ def override_dependencies():
     
     # 추가 더미 데이터 (필요한 모든 코드 포함)
     dummy = Trademark(
+        id=4,
         applicationNumber="40-2023-0004",
         productName="테스트상표",
         productNameEng="Test Mark",

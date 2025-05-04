@@ -9,9 +9,9 @@ from sqlalchemy.dialects.postgresql import insert
 # 상위 디렉토리를 import path에 추가
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from database import SessionLocal, init_db
+from app.database import SessionLocal, init_db
 from app.models.trademark import Trademark
-from config import settings
+from app.config import settings
 
 # 로깅 설정
 logging.basicConfig(
@@ -114,6 +114,10 @@ def load_json_to_db(json_file_path):
                 # 데이터 전처리
                 processed_data = preprocess_trademark_data(trademark_data)
                 
+                # id 필드 생성 (정수값 사용)
+                # application number는 문자열이므로 정수 ID를 별도로 생성
+                processed_data['id'] = count + 1  # 순차적으로 정수 ID 할당
+                
                 # 배치에 추가
                 batch.append(processed_data)
                 count += 1
@@ -122,8 +126,8 @@ def load_json_to_db(json_file_path):
                 if len(batch) >= batch_size:
                     # upsert 작업 (on conflict do update)
                     db.execute(insert(Trademark).values(batch).on_conflict_do_update(
-                        index_elements=['applicationNumber'],
-                        set_={k: insert(Trademark).excluded[k] for k in processed_data.keys() if k != 'applicationNumber'}
+                        index_elements=['id'],
+                        set_={k: insert(Trademark).excluded[k] for k in processed_data.keys() if k != 'id'}
                     ))
                     db.commit()
                     logger.info(f"{count}개 데이터 처리 완료")
@@ -132,8 +136,8 @@ def load_json_to_db(json_file_path):
             # 남은 배치 처리
             if batch:
                 db.execute(insert(Trademark).values(batch).on_conflict_do_update(
-                    index_elements=['applicationNumber'],
-                    set_={k: insert(Trademark).excluded[k] for k in processed_data.keys() if k != 'applicationNumber'}
+                    index_elements=['id'],
+                    set_={k: insert(Trademark).excluded[k] for k in processed_data.keys() if k != 'id'}
                 ))
                 db.commit()
                 logger.info(f"{count}개 데이터 처리 완료 (마지막 배치)")
@@ -143,39 +147,15 @@ def load_json_to_db(json_file_path):
             db.execute(text("""
                 UPDATE trademarks 
                 SET search_vector = 
-                    setweight(to_tsvector('simple', coalesce(productName, '')), 'A') ||
-                    setweight(to_tsvector('simple', coalesce(productNameEng, '')), 'B') ||
-                    setweight(to_tsvector('simple', coalesce(applicationNumber, '')), 'C') ||
-                    setweight(to_tsvector('simple', coalesce(array_to_string(registrationNumber, ' '), '')), 'C')
+                    setweight(to_tsvector('simple', coalesce("productName", '')), 'A') ||
+                    setweight(to_tsvector('simple', coalesce("productNameEng", '')), 'B') ||
+                    setweight(to_tsvector('simple', coalesce("applicationNumber", '')), 'C') ||
+                    setweight(to_tsvector('simple', coalesce(array_to_string("registrationNumber", ' '), '')), 'C')
             """))
             db.commit()
             
-            # 트리거 생성/확인 (전문 검색 벡터 자동 업데이트용)
-            try:
-                db.execute(text("""
-                    CREATE OR REPLACE FUNCTION trademark_search_vector_update() RETURNS trigger AS $$
-                    BEGIN
-                        NEW.search_vector = 
-                            setweight(to_tsvector('simple', coalesce(NEW.productName, '')), 'A') ||
-                            setweight(to_tsvector('simple', coalesce(NEW.productNameEng, '')), 'B') ||
-                            setweight(to_tsvector('simple', coalesce(NEW.applicationNumber, '')), 'C') ||
-                            setweight(to_tsvector('simple', coalesce(array_to_string(NEW.registrationNumber, ' '), '')), 'C');
-                        RETURN NEW;
-                    END;
-                    $$ LANGUAGE plpgsql;
-                    
-                    DROP TRIGGER IF EXISTS trademark_search_vector_update ON trademarks;
-                    
-                    CREATE TRIGGER trademark_search_vector_update
-                    BEFORE INSERT OR UPDATE ON trademarks
-                    FOR EACH ROW EXECUTE FUNCTION trademark_search_vector_update();
-                """))
-                db.commit()
-                logger.info("검색 벡터 자동 업데이트 트리거 생성 완료")
-            except Exception as e:
-                db.rollback()
-                logger.warning(f"트리거 생성 실패: {str(e)}")
-            
+            # 트리거는 init_db()에서 이미 생성됨
+            logger.info("검색 벡터 업데이트 완료")
             logger.info(f"데이터베이스 로드 완료: 총 {count}개 상표 데이터")
             
         except Exception as e:

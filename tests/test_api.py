@@ -47,7 +47,7 @@ class TestTrademarkAPI:
     def test_get_trademark_detail(self, client: TestClient):
         """상표 상세 정보 조회 API 테스트"""
         # 존재하는 ID로 조회
-        response = client.get("/api/v1/trademarks/40-2023-0001")
+        response = client.get("/api/v1/trademarks/1")
         assert response.status_code == 200
         
         data = response.json()
@@ -55,7 +55,7 @@ class TestTrademarkAPI:
         assert data["productName"] == "스타벅스"
         
         # 존재하지 않는 ID로 조회
-        response = client.get("/api/v1/trademarks/non-existent-id")
+        response = client.get("/api/v1/trademarks/999")
         assert response.status_code == 404
     
     def test_get_register_statuses(self, client: TestClient):

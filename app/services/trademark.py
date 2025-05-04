@@ -74,14 +74,21 @@ class TrademarkService:
         ID로 상표 상세 정보 조회
         
         Args:
-            trademark_id: 조회할 상표 ID (applicationNumber)
+            trademark_id: 조회할 상표 ID
             
         Returns:
             상표 상세 정보 또는 None
         """
         try:
+            # 문자열 ID를 정수로 변환
+            try:
+                id_value = int(trademark_id)
+            except ValueError:
+                logger.debug(f"상표 ID '{trademark_id}' 변환 실패: 정수로 변환할 수 없음")
+                return None
+                
             # 저장소를 통해 데이터 조회
-            trademark = self.repository.find_by_id(trademark_id)
+            trademark = self.repository.find_by_id(id_value)
             
             if not trademark:
                 logger.debug(f"상표 ID '{trademark_id}' 조회: 해당 상표를 찾을 수 없음")

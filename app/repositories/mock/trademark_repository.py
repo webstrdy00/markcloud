@@ -15,11 +15,11 @@ class MockTrademarkRepository(ITrademarkRepository):
     """
     
     def __init__(self):
-        self.trademarks = {}  # 메모리에 상표 저장
+        self.trademarks = {}  # 메모리에 상표 저장 
         self.register_statuses = ["등록", "출원", "거절", "실효"]
         self.product_codes = ["01", "02", "03", "05", "35", "42", "43"]
     
-    def find_by_id(self, id: str) -> Optional[Trademark]:
+    def find_by_id(self, id: int) -> Optional[Trademark]:
         """
         ID로 상표 조회
         """
@@ -83,16 +83,16 @@ class MockTrademarkRepository(ITrademarkRepository):
         """
         상표 생성
         """
-        # ID 없으면 생성 불가
-        if not entity.applicationNumber:
-            raise ValueError("applicationNumber는 필수 항목입니다")
-        
         # 이미 존재하는 ID면 오류
-        if entity.applicationNumber in self.trademarks:
-            raise ValueError(f"applicationNumber '{entity.applicationNumber}'은(는) 이미 존재합니다")
+        if entity.id is not None and entity.id in self.trademarks:
+            raise ValueError(f"id '{entity.id}'은(는) 이미 존재합니다")
+        
+        # 새 ID 생성 (없는 경우)
+        if entity.id is None:
+            entity.id = max(self.trademarks.keys(), default=0) + 1
         
         # 상표 저장
-        self.trademarks[entity.applicationNumber] = entity
+        self.trademarks[entity.id] = entity
         return entity
     
     def update(self, entity: Trademark) -> Trademark:
@@ -100,18 +100,18 @@ class MockTrademarkRepository(ITrademarkRepository):
         상표 업데이트
         """
         # ID 없으면 업데이트 불가
-        if not entity.applicationNumber:
-            raise ValueError("applicationNumber는 필수 항목입니다")
+        if entity.id is None:
+            raise ValueError("id는 필수 항목입니다")
         
         # 존재하지 않는 ID면 오류
-        if entity.applicationNumber not in self.trademarks:
-            raise ValueError(f"applicationNumber '{entity.applicationNumber}'을(를) 찾을 수 없습니다")
+        if entity.id not in self.trademarks:
+            raise ValueError(f"id '{entity.id}'을(를) 찾을 수 없습니다")
         
         # 상표 업데이트
-        self.trademarks[entity.applicationNumber] = entity
+        self.trademarks[entity.id] = entity
         return entity
     
-    def delete(self, id: str) -> bool:
+    def delete(self, id: int) -> bool:
         """
         ID로 상표 삭제
         """

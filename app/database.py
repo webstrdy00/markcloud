@@ -80,8 +80,23 @@ def init_db():
         Base.metadata.create_all(bind=engine)
         logger.info("데이터베이스 테이블 생성 완료")
         
-        # 트리거 생성 (이미 SQL 스크립트에서 함수가 생성되었다고 가정)
+        # 먼저 트리거 함수 생성 후 트리거 생성
         with engine.connect() as conn:
+            # 트리거 함수 생성
+            conn.execute(text("""
+                CREATE OR REPLACE FUNCTION trademark_search_vector_update() RETURNS trigger AS $$
+                BEGIN
+                    NEW.search_vector = 
+                        setweight(to_tsvector('simple', coalesce(NEW."productName", '')), 'A') ||
+                        setweight(to_tsvector('simple', coalesce(NEW."productNameEng", '')), 'B') ||
+                        setweight(to_tsvector('simple', coalesce(NEW."applicationNumber", '')), 'C') ||
+                        setweight(to_tsvector('simple', coalesce(array_to_string(NEW."registrationNumber", ' '), '')), 'C');
+                    RETURN NEW;
+                END;
+                $$ LANGUAGE plpgsql;
+            """))
+            
+            # 트리거 생성
             conn.execute(text("""
                 DROP TRIGGER IF EXISTS trademark_search_vector_update ON trademarks;
                 CREATE TRIGGER trademark_search_vector_update
@@ -89,7 +104,7 @@ def init_db():
                 FOR EACH ROW EXECUTE FUNCTION trademark_search_vector_update();
             """))
             conn.commit()
-            logger.info("트리거 생성 완료")
+            logger.info("트리거 함수 및 트리거 생성 완료")
     except Exception as e:
         logger.error(f"데이터베이스 테이블 생성 실패: {str(e)}")
         raise

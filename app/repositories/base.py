@@ -14,7 +14,7 @@ class BaseRepository(Generic[ModelT, ParamsT], ABC):
     """
     
     @abstractmethod
-    def find_by_id(self, id: str) -> Optional[ModelT]:
+    def find_by_id(self, id: int) -> Optional[ModelT]:
         """
         ID로 단일 엔티티 조회
         
@@ -76,7 +76,7 @@ class BaseRepository(Generic[ModelT, ParamsT], ABC):
         pass
     
     @abstractmethod
-    def delete(self, id: str) -> bool:
+    def delete(self, id: int) -> bool:
         """
         ID로 엔티티 삭제
         

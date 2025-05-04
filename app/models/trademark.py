@@ -1,16 +1,15 @@
-from sqlalchemy import Column, String, Date, Index
+from sqlalchemy import Column, String, Date, Index, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import ARRAY, TSVECTOR
-
-# Base 클래스 생성
-Base = declarative_base()
+from app.database import Base
 
 class Trademark(Base):
     """상표 데이터베이스 모델"""
     __tablename__ = "trademarks"
 
     # 기본 필드 - 길이 제한 추가 및 컬럼 타입 최적화
-    applicationNumber = Column(String(20), primary_key=True, index=True, comment="출원 번호")
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    applicationNumber = Column(String(20), index=True, comment="출원 번호")
     productName = Column(String(255), nullable=True, comment="상표명(한글)")
     productNameEng = Column(String(255), nullable=True, comment="상표명(영문)")
     

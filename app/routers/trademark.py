@@ -50,7 +50,7 @@ async def get_trademark_detail(
     """
     상표 상세 정보 조회 API 엔드포인트
     
-    - **trademark_id**: 조회할 상표 ID (applicationNumber)
+    - **trademark_id**: 조회할 상표 ID
     """
     trademark = service.get_trademark_by_id(trademark_id)
     

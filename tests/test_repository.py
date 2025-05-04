@@ -10,13 +10,13 @@ class TestMockTrademarkRepository:
     def test_find_by_id(self, mock_repository):
         """ID로 상표 조회 테스트"""
         # 존재하는 ID로 조회
-        trademark = mock_repository.find_by_id("40-2023-0001")
+        trademark = mock_repository.find_by_id(1)
         assert trademark is not None
         assert trademark.applicationNumber == "40-2023-0001"
         assert trademark.productName == "스타벅스"
         
         # 존재하지 않는 ID로 조회
-        trademark = mock_repository.find_by_id("non-existent-id")
+        trademark = mock_repository.find_by_id(999)
         assert trademark is None
     
     def test_search_with_query(self, mock_repository):
@@ -148,9 +148,11 @@ class TestMockTrademarkRepository:
         # 생성 결과 검증
         assert created.applicationNumber == "40-2023-0004"
         assert created.productName == "이디야커피"
+        assert created.id is not None  # ID가 할당되었는지 확인
         
         # ID로 조회
-        retrieved = mock_repository.find_by_id("40-2023-0004")
+        created_id = created.id
+        retrieved = mock_repository.find_by_id(created_id)
         assert retrieved is not None
         assert retrieved.productName == "이디야커피"
         
@@ -162,27 +164,27 @@ class TestMockTrademarkRepository:
         assert updated.registerStatus == "등록"
         
         # 다시 조회하여 확인
-        after_update = mock_repository.find_by_id("40-2023-0004")
+        after_update = mock_repository.find_by_id(created_id)
         assert after_update.registerStatus == "등록"
     
     def test_delete(self, mock_repository):
         """상표 삭제 테스트"""
         # 삭제 전 확인
-        before_delete = mock_repository.find_by_id("40-2023-0001")
+        before_delete = mock_repository.find_by_id(1)
         assert before_delete is not None
         
         # 삭제 실행
-        result = mock_repository.delete("40-2023-0001")
+        result = mock_repository.delete(1)
         
         # 삭제 결과 검증
         assert result == True
         
         # 삭제 후 확인
-        after_delete = mock_repository.find_by_id("40-2023-0001")
+        after_delete = mock_repository.find_by_id(1)
         assert after_delete is None
         
         # 존재하지 않는 ID 삭제
-        result = mock_repository.delete("non-existent-id")
+        result = mock_repository.delete(999)
         assert result == False
     
     def test_get_register_statuses(self, mock_repository):
