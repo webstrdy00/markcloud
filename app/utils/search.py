@@ -41,6 +41,14 @@ def calculate_similarity(text: str, query: str) -> float:
     Returns:
         유사도 (0.0 ~ 1.0)
     """
+    # 널값 처리
+    if text is None or query is None:
+        return 0.0
+        
+    # 완전 일치일 경우 1.0 반환
+    if text.lower() == query.lower():
+        return 1.0
+        
     # 모두 소문자로 변환하여 비교
     text_lower = text.lower()
     query_lower = query.lower()
@@ -63,6 +71,10 @@ def is_korean(text: str) -> bool:
     Returns:
         한글이 포함되어 있으면 True, 아니면 False
     """
+    # None이나 빈 문자열 처리
+    if not text:
+        return False
+    
     # 한글 유니코드 범위: AC00-D7A3 (가-힣)
     return bool(re.search(r'[가-힣]', text))
 

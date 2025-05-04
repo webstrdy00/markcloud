@@ -17,7 +17,7 @@ class MockTrademarkRepository(ITrademarkRepository):
     def __init__(self):
         self.trademarks = {}  # 메모리에 상표 저장
         self.register_statuses = ["등록", "출원", "거절", "실효"]
-        self.product_codes = ["01", "02", "03", "05", "35", "42"]
+        self.product_codes = ["01", "02", "03", "05", "35", "42", "43"]
     
     def find_by_id(self, id: str) -> Optional[Trademark]:
         """

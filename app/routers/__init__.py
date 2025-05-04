@@ -1,1 +1,1 @@
-from .trademark import trademark
+from .trademark import router as trademark_router

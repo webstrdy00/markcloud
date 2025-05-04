@@ -250,7 +250,7 @@ class PostgresTrademarkRepository(ITrademarkRepository):
         # 검색어 준비
         search_term = search_term.strip()
         
-        # 한글 초성 검색인지 확인 - 올바른 함수 호출 방식으로 수정
+        # 한글 초성 검색인지 확인
         is_initial_search = matches_initial_consonants(search_term, search_term)
         
         if is_initial_search:

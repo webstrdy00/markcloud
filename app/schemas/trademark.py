@@ -70,12 +70,15 @@ class SearchResult(BaseModel):
     applicationDate: Optional[date] = None
     registerStatus: Optional[str] = None
     
-    # 명시적 리스트 필드 (필수지만 빈 배열 가능)
-    registrationNumber: List[str] = Field(default_factory=list)
-    registrationDate: List[date] = Field(default_factory=list)
+    # 명시적 리스트 필드 (None도 허용 + 기본값 추가)
+    registrationNumber: List[str] | None = Field(default_factory=list)
+    registrationDate: List[date] | None = Field(default_factory=list)
     
     # 배열 필드
-    asignProductMainCodeList: List[str] = Field(default_factory=list)
+    asignProductMainCodeList: List[str] | None = Field(default_factory=list)
+    
+    # 유사도 점수 필드 추가
+    similarity_score: Optional[float] = None
     
     model_config = ConfigDict(
         json_encoders = {
