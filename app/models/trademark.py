@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, TSVECTOR
 # Base 클래스 생성
 Base = declarative_base()
 
-class Tradmark(Base):
+class Trademark(Base):
     """상표 데이터베이스 모델"""
     __tablename__ = "trademarks"
 
@@ -43,21 +43,21 @@ class Tradmark(Base):
 
 # PostgreSQL 인덱스 최적화
 # gin_trgm_ops 연산자 클래스를 명시적으로 지정 (pg_trgm 확장 필요)
-Index('idx_product_name_trgm', Tradmark.productName, 
+Index('idx_product_name_trgm', Trademark.productName, 
       postgresql_using='gin', 
       postgresql_ops={"productName": "gin_trgm_ops"})
 
-Index('idx_product_name_eng_trgm', Tradmark.productNameEng, 
+Index('idx_product_name_eng_trgm', Trademark.productNameEng, 
       postgresql_using='gin', 
       postgresql_ops={"productNameEng": "gin_trgm_ops"})
 
 # tsvector 인덱스는 그대로 유지 (이미 올바르게 설정됨)
-Index('idx_search_vector', Tradmark.search_vector, postgresql_using='gin')
+Index('idx_search_vector', Trademark.search_vector, postgresql_using='gin')
 
 # 배열 필드에 대한 GIN 인덱스 추가 - 다수 필드 검색 지원
-Index('idx_product_main_code_array', Tradmark.asignProductMainCodeList, postgresql_using='gin')
-Index('idx_product_sub_code_array', Tradmark.asignProductSubCodeList, postgresql_using='gin')
-Index('idx_vienna_code_array', Tradmark.viennaCodeList, postgresql_using='gin')
+Index('idx_product_main_code_array', Trademark.asignProductMainCodeList, postgresql_using='gin')
+Index('idx_product_sub_code_array', Trademark.asignProductSubCodeList, postgresql_using='gin')
+Index('idx_vienna_code_array', Trademark.viennaCodeList, postgresql_using='gin')
 
 # # 검색 벡터 자동 업데이트를 위한 트리거 정의
 # # PostgreSQL에서 실행할 DDL 스크립트

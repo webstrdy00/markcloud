@@ -1,5 +1,5 @@
 # 인터페이스
-from trademark_repository import ITrademarkRepository
+from .trademark_repository import ITrademarkRepository
 
 # 기본(PostgreSQL) 구현
 from .postgresql.trademark_repository import PostgresTrademarkRepository

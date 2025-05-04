@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import insert
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import SessionLocal, init_db
-from models.tradmark import Tradmark
+from app.models.trademark import Trademark
 from config import settings
 
 # 로깅 설정
@@ -121,9 +121,9 @@ def load_json_to_db(json_file_path):
                 # 배치 크기에 도달하면 데이터베이스에 삽입
                 if len(batch) >= batch_size:
                     # upsert 작업 (on conflict do update)
-                    db.execute(insert(Tradmark).values(batch).on_conflict_do_update(
+                    db.execute(insert(Trademark).values(batch).on_conflict_do_update(
                         index_elements=['applicationNumber'],
-                        set_={k: insert(Tradmark).excluded[k] for k in processed_data.keys() if k != 'applicationNumber'}
+                        set_={k: insert(Trademark).excluded[k] for k in processed_data.keys() if k != 'applicationNumber'}
                     ))
                     db.commit()
                     logger.info(f"{count}개 데이터 처리 완료")
@@ -131,9 +131,9 @@ def load_json_to_db(json_file_path):
             
             # 남은 배치 처리
             if batch:
-                db.execute(insert(Tradmark).values(batch).on_conflict_do_update(
+                db.execute(insert(Trademark).values(batch).on_conflict_do_update(
                     index_elements=['applicationNumber'],
-                    set_={k: insert(Tradmark).excluded[k] for k in processed_data.keys() if k != 'applicationNumber'}
+                    set_={k: insert(Trademark).excluded[k] for k in processed_data.keys() if k != 'applicationNumber'}
                 ))
                 db.commit()
                 logger.info(f"{count}개 데이터 처리 완료 (마지막 배치)")

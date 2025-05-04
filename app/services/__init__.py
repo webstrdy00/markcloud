@@ -1,1 +1,1 @@
-from .tradmark import TradmarkService
+from .trademark import TrademarkService
