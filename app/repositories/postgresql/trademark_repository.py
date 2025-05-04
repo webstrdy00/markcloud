@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from ...models.trademark import Trademark
 from ...schemas.trademark import TrademarkSearchParams
 from ..trademark_repository import ITrademarkRepository
+from ...utils.search import is_korean, matches_initial_consonants
 
 # 로깅 설정
 logger = logging.getLogger(__name__)
@@ -249,16 +250,33 @@ class PostgresTrademarkRepository(ITrademarkRepository):
         # 검색어 준비
         search_term = search_term.strip()
         
-        # 한글 초성 검색인지 확인 (ㄱ, ㄴ, ㄷ 등으로만 구성)
-        is_initial_search = all(char in 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ' for char in search_term)
+        # 한글 초성 검색인지 확인 - 올바른 함수 호출 방식으로 수정
+        is_initial_search = matches_initial_consonants(search_term, search_term)
         
         if is_initial_search:
-            # PostgreSQL 한글 초성 검색 함수 사용 (데이터베이스에 함수 생성 필요)
-            # 참고: 앞서 정의한 extract_korean_initial 함수 활용
-            search_condition = text(f"extract_korean_initial(productName) LIKE '%{search_term}%'")
-            query = query.where(search_condition)
+            logger.debug(f"한글 초성 검색 패턴 감지: {search_term}")
+            # 한글 초성 검색 - PostgreSQL 함수 활용
+            try:
+                # SQL 인젝션 방지를 위해 bindparams 사용
+                sql_text = text("extract_korean_initial(\"productName\") ILIKE :pattern")
+                search_condition = sql_text.bindparams(pattern=f"%{search_term}%")
+                query = query.where(search_condition)
+                logger.debug(f"한글 초성 검색 조건 적용: {search_term}")
+            except Exception as e:
+                logger.warning(f"한글 초성 검색 실패, 일반 검색으로 대체: {str(e)}")
+                # 실패시 일반 검색으로 대체
+                search_condition = or_(
+                    Trademark.productName.ilike(f"%{search_term}%"),
+                    Trademark.productNameEng.ilike(f"%{search_term}%"),
+                    Trademark.applicationNumber.ilike(f"%{search_term}%")
+                )
+                query = query.where(search_condition)
         else:
-            # PostgreSQL 전문 검색 및 트리그램 유사도 검색 활용
+            # 한글 검색인지 확인 - is_korean 함수 활용하여 가독성 개선
+            has_korean = is_korean(search_term)
+            logger.debug(f"검색어 분석: 한글포함={has_korean}, 검색어='{search_term}'")
+            
+            # 일반 검색 - 트리그램 유사도 활용
             
             # 1. tsvector 기반 전문 검색
             # 검색어를 토큰화하고 각 토큰에 :* 접미사 추가 (접두사 검색)
@@ -266,15 +284,15 @@ class PostgresTrademarkRepository(ITrademarkRepository):
             tsquery_text = " & ".join(tsquery_tokens)
             tsquery = func.to_tsquery('simple', tsquery_text)
             
-            # 2. 트리그램 유사도 기반 퍼지 검색 (pg_trgm 확장 필요)
+            # 2. 트리그램 유사도 기반 퍼지 검색
             # similarity 함수가 0.3 이상이면 유사하다고 판단
             similarity_threshold = 0.3
             similarity_conditions = [
                 func.similarity(Trademark.productName, search_term) > similarity_threshold,
                 func.similarity(Trademark.productNameEng, search_term) > similarity_threshold,
-                Trademark.applicationNumber.ilike(f'%{search_term}%'),
-                # 배열 필드 검색
-                Trademark.registrationNumber.any(search_term)
+                Trademark.applicationNumber.ilike(f"%{search_term}%"),
+                # 배열 필드 검색을 위한 조건
+                func.array_to_string(Trademark.registrationNumber, ',').ilike(f"%{search_term}%")
             ]
             
             # 검색 조건 적용

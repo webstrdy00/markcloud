@@ -5,6 +5,7 @@ from ..schemas import TrademarkSearchParams, SearchResult, TrademarkDetail
 from ..repositories.trademark_repository import ITrademarkRepository
 from ..repositories.factory import get_trademark_repository
 from ..utils.dto import to_schema, to_schema_list
+from ..utils.search import fuzzy_match, calculate_similarity
 
 # 로거 설정
 logger = logging.getLogger(__name__)
@@ -39,6 +40,27 @@ class TrademarkService:
             
             # 결과 변환 (DB 모델 -> 응답 스키마) - 헬퍼 함수 활용
             results = to_schema_list(trademarks, SearchResult)
+            
+            # 검색어가 있고 결과가 적은 경우(10개 이하), Python 퍼지 매칭으로 후처리
+            # 대량 데이터에서는 이 로직이 무거울 수 있으므로 결과가 적을 때만 실행
+            if params.query and len(results) <= 10:
+                logger.debug(f"Python 퍼지 매칭 후처리 적용 - 결과 {len(results)}건")
+                # 결과 정렬 - 유사도에 따라 재정렬
+                if results:
+                    # 상표명 유사도 계산 (None 체크 필요)
+                    for result in results:
+                        # productName이 None이면 빈 문자열로 대체
+                        product_name = result.productName or ""
+                        # 유사도 점수 계산 및 저장 (임시 필드)
+                        result.similarity_score = calculate_similarity(product_name, params.query)
+                    
+                    # 유사도에 따라 내림차순 정렬
+                    results.sort(key=lambda x: x.similarity_score, reverse=True)
+                    
+                    # 임시 필드 제거
+                    for result in results:
+                        if hasattr(result, 'similarity_score'):
+                            delattr(result, 'similarity_score')
             
             logger.debug(f"상표 검색 결과: {total_count}건 중 {len(results)}건 반환")
             return results, total_count
