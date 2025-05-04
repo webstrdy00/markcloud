@@ -22,9 +22,10 @@ def fuzzy_match(text: str, query: str, threshold: float = 0.6) -> bool:
     if query.lower() in text.lower():
         return True
     
-    # 한글 초성 검색 지원
-    if is_korean(query) and matches_initial_consonants(text, query):
-        return True
+    # 한글 초성 검색 지원 (모든 문자가 초성인 경우)
+    if all(char in 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ' for char in query):
+        if matches_initial_consonants(text, query):
+            return True
     
     # 유사도 계산
     similarity = calculate_similarity(text, query)

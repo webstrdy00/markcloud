@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from ...models.trademark import Trademark
 from ...schemas.trademark import TrademarkSearchParams
 from ..trademark_repository import ITrademarkRepository
-from ...utils.search import is_korean, matches_initial_consonants
+from ...utils.search import is_korean, matches_initial_consonants, extract_initial_consonants
 
 # 로깅 설정
 logger = logging.getLogger(__name__)
@@ -59,18 +59,51 @@ class PostgresTrademarkRepository(ITrademarkRepository):
             query = self._apply_filters(query, params)
             
             # 검색어가 있는 경우 검색 조건 적용
+            initial_search_term = None
             if params.query:
                 query = self._apply_search_conditions(query, params.query)
+                # 초성 검색 여부 확인
+                if hasattr(query, '_initial_search_term'):
+                    initial_search_term = getattr(query, '_initial_search_term')
+                    delattr(query, '_initial_search_term')
             
-            # 총 결과 수 계산을 위한 카운트 쿼리
+            # 총 결과 수 계산을 위한 카운트 쿼리 (초성 검색이면 나중에 수정)
             count_query = query.with_only_columns(func.count()).order_by(None)
-            total_count = self.db.execute(count_query).scalar()
-            
-            # 페이징 적용
-            query = query.offset(params.offset).limit(params.limit)
             
             # 결과 조회
             results = self.db.execute(query).scalars().all()
+            
+            # 초성 검색인 경우 Python에서 필터링
+            if initial_search_term:
+                from ...utils.search import matches_initial_consonants, extract_initial_consonants
+                # 초성 검색 필터링 - 로깅 추가
+                filtered_results = []
+                logger.debug(f"초성 검색 필터링 시작: 검색어='{initial_search_term}', 결과 수={len(results)}")
+                
+                for trademark in results:
+                    # productName이 있고 초성과 일치하는지 확인
+                    product_name = trademark.productName or ""
+                    if product_name and initial_search_term in extract_initial_consonants(product_name):
+                        filtered_results.append(trademark)
+                        if len(filtered_results) <= 5:  # 처음 5개만 로깅
+                            logger.debug(f"초성 일치: 상표명='{product_name}', 초성='{extract_initial_consonants(product_name)}'")
+                
+                # 필터링된 결과로 대체
+                logger.debug(f"초성 검색 필터링 완료: 검색어='{initial_search_term}', 필터링 전={len(results)}, 필터링 후={len(filtered_results)}")
+                results = filtered_results
+                total_count = len(results)
+                
+                # 페이징 적용 (Python에서)
+                start = params.offset
+                end = start + params.limit
+                results = results[start:end]
+            else:
+                # 기본 페이징 및 카운트
+                total_count = self.db.execute(count_query).scalar()
+                
+                # 페이징 적용
+                query = query.offset(params.offset).limit(params.limit)
+                results = self.db.execute(query).scalars().all()
             
             return results, total_count
         
@@ -255,15 +288,23 @@ class PostgresTrademarkRepository(ITrademarkRepository):
         
         if is_initial_search:
             logger.debug(f"한글 초성 검색 패턴 감지: {search_term}")
-            # 한글 초성 검색 - PostgreSQL 함수 활용
+            # 한글 초성 검색 - Python 구현 함수 활용 (데이터베이스 함수 사용 안함)
             try:
-                # SQL 인젝션 방지를 위해 bindparams 사용
-                sql_text = text("extract_korean_initial(\"productName\") ILIKE :pattern")
-                search_condition = sql_text.bindparams(pattern=f"%{search_term}%")
-                query = query.where(search_condition)
-                logger.debug(f"한글 초성 검색 조건 적용: {search_term}")
+                # 기본 필터링을 최소화하고 모든 결과를 가져온 다음 Python에서 필터링합니다
+                # 초성 검색을 위한 플래그 설정
+                setattr(query, '_initial_search_term', search_term)
+                
+                # 검색어가 하나 이상일 경우, 첫 글자로만 약간의 필터링 수행
+                if len(search_term) > 1:
+                    # 약한 필터링 - DB에서 필터링을 최소화하고 Python에서 정확히 필터링
+                    search_condition = Trademark.id > 0  # 항상 True 조건
+                    query = query.where(search_condition)
+                    logger.debug(f"한글 초성 검색을 위한 최소 필터 적용: {search_term}")
+                else:
+                    # 검색어가 한 글자인 경우 필터링 없이 진행
+                    logger.debug(f"한글 초성 검색 - 필터 없이 전체 데이터 대상 검색: {search_term}")
             except Exception as e:
-                logger.warning(f"한글 초성 검색 실패, 일반 검색으로 대체: {str(e)}")
+                logger.warning(f"한글 초성 검색 필터 설정 실패, 일반 검색으로 대체: {str(e)}")
                 # 실패시 일반 검색으로 대체
                 search_condition = or_(
                     Trademark.productName.ilike(f"%{search_term}%"),
