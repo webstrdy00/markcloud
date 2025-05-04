@@ -35,14 +35,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 테이블 생성 후 트리거 추가 (참고용 - 애플리케이션에서 자동 생성됨)
-/*
-CREATE TRIGGER trademark_search_vector_update
-BEFORE INSERT OR UPDATE ON trademarks
-FOR EACH ROW EXECUTE FUNCTION trademark_search_vector_update();
-*/
-
--- 한글 초성 검색을 위한 함수 (선택 사항)
+-- 한글 초성 검색을 위한 함수
 CREATE OR REPLACE FUNCTION extract_korean_initial(text) RETURNS text AS $$
 DECLARE
     result text := '';
@@ -50,6 +43,10 @@ DECLARE
     curr_code int;
     chosung text[] := ARRAY['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
 BEGIN
+    IF $1 IS NULL THEN
+        RETURN NULL;
+    END IF;
+    
     FOR i IN 1..length($1) LOOP
         curr_char := substring($1 from i for 1);
         curr_code := ascii(curr_char);
@@ -66,4 +63,44 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
--- 필요한 추가 설정이 있다면 여기에 작성하세요
+-- 문자열 유사도 계산 함수 (search.py의 calculate_similarity 구현)
+CREATE OR REPLACE FUNCTION calculate_string_similarity(text1 text, text2 text) RETURNS float AS $$
+BEGIN
+    -- pg_trgm의 similarity 함수 활용
+    IF text1 ILIKE '%' || text2 || '%' THEN
+        RETURN 0.9;  -- 정확히 포함된 경우 높은 점수 부여
+    ELSE
+        RETURN similarity(text1, text2);
+    END IF;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- 퍼지 매칭 함수 (search.py의 fuzzy_match 구현)
+CREATE OR REPLACE FUNCTION fuzzy_match(text1 text, text2 text, threshold float DEFAULT 0.6) RETURNS boolean AS $$
+BEGIN
+    -- NULL 처리
+    IF text1 IS NULL OR text2 IS NULL THEN
+        RETURN FALSE;
+    END IF;
+    
+    -- 정확히 포함된 경우
+    IF text1 ILIKE '%' || text2 || '%' THEN
+        RETURN TRUE;
+    END IF;
+    
+    -- 초성 매칭 확인
+    IF extract_korean_initial(text1) ILIKE '%' || text2 || '%' THEN
+        RETURN TRUE;
+    END IF;
+    
+    -- 유사도 계산 및 임계값 비교
+    RETURN calculate_string_similarity(text1, text2) >= threshold;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- 테이블 생성 후 트리거 추가 (참고용 - 애플리케이션에서 자동 생성됨)
+/*
+CREATE TRIGGER trademark_search_vector_update
+BEFORE INSERT OR UPDATE ON trademarks
+FOR EACH ROW EXECUTE FUNCTION trademark_search_vector_update();
+*/
