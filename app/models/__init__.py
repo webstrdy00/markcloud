@@ -1,0 +1,1 @@
+from .trademark import Trademark

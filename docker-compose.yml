@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: trademark
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: trademark_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # 데이터 유지를 위한 볼륨 마운트
+      - ./init-scripts:/docker-entrypoint-initdb.d # 초기화 스크립트 (옵션)
+    restart: unless-stopped
+    networks:
+      - trademark-network
+
+  # pgAdmin (PostgreSQL 관리 도구) - 필요시 활성화
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: trademark-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80" # pgAdmin 웹 인터페이스 포트
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin # 설정 / 세션 유지
+    depends_on:
+      - postgres
+    networks:
+      - trademark-network
+    profiles:
+      - admin # docker-compose --profile admin up 명령으로만 실행됨 (기본적으로는 실행 안됨)
+
+volumes:
+  postgres_data: # 데이터베이스 데이터를 저장할 볼륨
+  pgadmin_data:
+
+networks:
+  trademark-network:
+    driver: bridge

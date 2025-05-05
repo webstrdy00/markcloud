@@ -1,0 +1,1 @@
+from .trademark import router as trademark_router
