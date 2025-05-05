@@ -56,7 +56,7 @@
 
 #### 상표 검색 API
 
-- **GET** `/api/v1/trademarks`
+- **GET** `/trademarks`
 - **쿼리 파라미터**:
 
   - `q`: 검색어 (상표명, 출원번호 등)
@@ -71,16 +71,16 @@
 
   ```
   # 기본 검색
-  GET /api/v1/trademarks?q=스타벅스&limit=20
+  GET /trademarks?q=스타벅스&limit=20
 
   # 필터 적용 검색
-  GET /api/v1/trademarks?q=커피&status=등록&product_code=3006&from_date=20200101&to_date=20221231&date_type=applicationDate
+  GET /trademarks?q=커피&status=등록&product_code=3006&from_date=20200101&to_date=20221231&date_type=applicationDate
 
   # 한글 초성 검색
-  GET /api/v1/trademarks?q=ㅅㅌㅂㅅ
+  GET /trademarks?q=ㅅㅌㅂㅅ
 
   # 페이징 처리
-  GET /api/v1/trademarks?q=apple&offset=20&limit=10
+  GET /trademarks?q=apple&offset=20&limit=10
   ```
 
 - **응답 형식**:
@@ -107,7 +107,7 @@
 
 #### 상표 상세 정보 API
 
-- **GET** `/api/v1/trademarks/{trademark_id}`
+- **GET** `/trademarks/{trademark_id}`
 - **경로 파라미터**:
 
   - `trademark_id`: 조회할 상표 ID
@@ -138,13 +138,13 @@
 
 #### 메타데이터 API
 
-- **GET** `/api/v1/trademarks/meta/statuses` - 등록 상태 목록
+- **GET** `/trademarks/meta/statuses` - 등록 상태 목록
 
   ```json
   ["등록", "출원", "거절", "소멸", "포기"]
   ```
 
-- **GET** `/api/v1/trademarks/meta/product-codes` - 상품 분류 코드 목록
+- **GET** `/trademarks/meta/product-codes` - 상품 분류 코드 목록
   ```json
   ["0101", "0102", "0201", ... ]
   ```
